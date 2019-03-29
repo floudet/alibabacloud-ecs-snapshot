@@ -104,7 +104,7 @@ getInstanceName()
 
 getInstanceId()
 {
-     instance_id=$(aliyun ecs DescribeInstances --InstanceName $(getInstanceName) | python -m json.tool | grep InstanceId | cut -d':' -f2 | tr -d ',' | sed 's/"//g')
+     instance_id=$(aliyun ecs DescribeInstances --InstanceName $(getInstanceName) | egrep -Eow 'InstanceId":"([^"]*)"' | cut -d":" -f 2 | tr -d '"')
 
      echo ${instance_id}
 }
@@ -114,11 +114,11 @@ getInstanceId()
 # RETURNS INSTANCE ZONE
 #
 
-getInstanceZone()
+getInstanceRegion()
 {
-     instance_zone=$(aliyun ecs DescribeInstances --InstanceName $(getInstanceName) | python -m json.tool | grep RegionId | cut -d':' -f2 | tr -d ',' | sed 's/"//g')
+     instance_region=$(aliyun ecs DescribeInstances --InstanceName $(getInstanceName) | egrep -Eow 'RegionId":"([^"]*)"' | cut -d":" -f 2 | tr -d '"')
 
-     echo ${instance_zone}
+     echo ${instance_region}
 }
 
 
@@ -128,7 +128,7 @@ getInstanceZone()
 
 getDeviceList()
 {
-    device_list=$(aliyun ecs DescribeDisks --RegionId $(getInstanceZone) --InstanceId $(getInstanceId) | python -m json.tool | grep DiskId | cut -d':' -f2 | tr -d ',' | sed 's/"//g' | tr -d ' ')
+    device_list=$(aliyun ecs DescribeDisks --RegionId $(getInstanceRegion) --InstanceId $(getInstanceId) | egrep -Eow 'DiskId":"([^"]*)"' | cut -d":" -f 2 | tr -d '"')
 
     echo "$device_list"
 }
@@ -144,7 +144,7 @@ getDeviceName()
 {
     json_device_id="[\"$1\"]"
 
-    device_name=$(aliyun ecs DescribeDisks --RegionId $(getInstanceZone) --DiskIds $json_device_id | python -m json.tool | grep DiskName | cut -d':' -f2 | tr -d ',' | sed 's/"//g')
+    device_name=$(aliyun ecs DescribeDisks --RegionId $(getInstanceRegion) --DiskIds $json_device_id | egrep -Eow 'DiskName":"([^"]*)"' | cut -d":" -f 2 | tr -d '"')
 
     echo ${device_name}
 }
@@ -159,7 +159,7 @@ getDeviceType()
 {
     json_device_id="[\"$1\"]"
     
-    device_type=$(aliyun ecs DescribeDisks --RegionId $(getInstanceZone) --DiskIds $json_device_id | python -m json.tool | grep "\"Type" | cut -d':' -f2 | tr -d ',' | sed 's/"//g')
+    device_type=$(aliyun ecs DescribeDisks --RegionId $(getInstanceRegion) --DiskIds $json_device_id | egrep -Eow '\"Type":"([^"]*)"' | cut -d":" -f 2 | tr -d '"')
 
     echo ${device_type}
 }
@@ -175,7 +175,7 @@ getDeviceFile()
 {
     json_device_id="[\"$1\"]"
 
-    device_file=$(aliyun ecs DescribeDisks --RegionId $(getInstanceZone) --DiskIds $json_device_id | python -m json.tool | grep Device | cut -d':' -f2 | tr -d ',' | sed -e 's/"//g' -e 's;/dev/;;')
+    device_file=$(aliyun ecs DescribeDisks --RegionId $(getInstanceRegion) --DiskIds $json_device_id | egrep -Eow 'Device":"([^"]*)"' | cut -d':' -f2 | tr -d ',' | sed -e 's/"//g' -e 's;/dev/;;')
 
     echo ${device_file}
 }
@@ -217,7 +217,7 @@ getSnapshots()
     #create empty array
     SNAPSHOTS=()
 
-    snapshot_list=$(aliyun ecs DescribeSnapshots --RegionId $(getInstanceZone) --DiskId $1 | python -m json.tool | grep SnapshotId | cut -d':' -f2 | tr -d ',' | sed 's/"//g' | tr -d ' ')
+    snapshot_list=$(aliyun ecs DescribeSnapshots --RegionId $(getInstanceRegion) --DiskId $1 --PageSize 100 | egrep -Eow 'SnapshotId":"([^"]*)"' | cut -d":" -f 2 | tr -d '"')
 
     while read line
     do
@@ -238,7 +238,7 @@ getSnapshotCreatedDate()
 {
     json_snapshot_id="[\"$1\"]"
 
-    local snapshot_datetime=$(aliyun ecs DescribeSnapshots --RegionId $(getInstanceZone) --SnapshotIds $json_snapshot_id | python -m json.tool | grep CreationTime | cut -d':' -f2- | tr -d ',' | sed 's/"//g')
+    local snapshot_datetime=$(aliyun ecs DescribeSnapshots --RegionId $(getInstanceRegion) --SnapshotIds $json_snapshot_id | egrep -Eow 'CreationTime":"([^"]*)"' | cut -d':' -f2- | tr -d ',' | sed -e 's/"//g' -e 's;/dev/;;')
 
     # format date
     echo -e "$(date -d ${snapshot_datetime} +%s)"
@@ -286,7 +286,7 @@ createSnapshotWrapper()
     INSTANCE_ID=$(getInstanceId)
 
     # get the instance zone
-    INSTANCE_ZONE=$(getInstanceZone)
+    #INSTANCE_ZONE=$(getInstanceRegion)
 
     # get a list of all the devices
     DEVICE_LIST=$(getDeviceList)
@@ -325,7 +325,7 @@ deleteSnapshotsWrapper()
     # get a list of all the devices
     DEVICE_LIST=$(getDeviceList)
     
-    # create the snapshots
+    # delete the snapshots
     echo "${DEVICE_LIST}" | while read DEVICE_ID
     do
         # while > 64?
