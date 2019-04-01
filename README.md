@@ -16,8 +16,8 @@ alicloud-snapshot.sh will:
 
 The script has a number of **optional** usage options - for example you can:
 - Reduce the amount of snapshots to keep [(-d)](#snapshot-retention)
-- Create backup for another instance than the colling host [(-i)](#backing-up-remote-instance)
-- Exclude Disks whose name contain a specific string [(-f)](#exclude-disks)
+- Create backup for another instance than the calling host [(-i)](#backing-up-remote-instance)
+- Exclude Disks whose name contains a specific string [(-f)](#exclude-disks)
 
 ## Prerequisites
 * `aliyun-cli` must be installed and configured
@@ -99,13 +99,13 @@ By default the script will only backup disks attached to the calling Instance, h
        -i  Instance name to create backups for. If empty, makes backup for the calling host [OPTIONAL].
 
 ## Exclude Disks
-By default, snapshots will be created for all attached disks. To exclude disks whose name contain a specific string, use the -f flag:
+By default, snapshots will be created for all attached disks. To exclude disks whose name contains a specific string, use the -f flag:
 
     Usage: ./snapshot.sh [-f <filter_string>]
     
     Options:
     
-       -f  Exclude Disks whose name contain this specified string.
+       -f  Exclude Disks whose name contains this specified string.
 
 
 ## License
